@@ -13,14 +13,22 @@ interface SubscribedUser {
   subscribedAt: string;
 }
 
+export type ScanCallback = () => Promise<{
+  success: boolean;
+  coinsFound: number;
+  message: string;
+}>;
+
 export class TelegramBotServiceEnhanced {
   private bot: Telegraf | null = null;
   private subscribedUsers: SubscribedUser[] = [];
   private readonly usersFilePath: string;
+  private scanCallback: ScanCallback | null = null;
 
-  constructor() {
+  constructor(scanCallback?: ScanCallback) {
     this.usersFilePath = path.join(process.cwd(), 'data', 'subscribed_users.json');
-    
+    this.scanCallback = scanCallback || null;
+
     if (!TELEGRAM_BOT_TOKEN) {
       logger.warn('TELEGRAM_BOT_TOKEN not configured, Telegram notifications disabled');
       return;
@@ -33,6 +41,10 @@ export class TelegramBotServiceEnhanced {
     } catch (error) {
       logger.error('Failed to initialize Telegram bot:', error);
     }
+  }
+
+  setScanCallback(callback: ScanCallback): void {
+    this.scanCallback = callback;
   }
 
   private async loadSubscribedUsers(): Promise<void> {
@@ -65,13 +77,13 @@ export class TelegramBotServiceEnhanced {
 
   private getAllChatIds(): string[] {
     const chatIds = new Set<string>();
-    
+
     // Add users from environment variable (backward compatibility)
     TELEGRAM_CHAT_IDS.forEach(id => chatIds.add(id));
-    
+
     // Add dynamically subscribed users
     this.subscribedUsers.forEach(user => chatIds.add(user.id.toString()));
-    
+
     return Array.from(chatIds);
   }
 
@@ -92,7 +104,7 @@ export class TelegramBotServiceEnhanced {
         `/scan - Run manual scan\n` +
         `/status - Check scanner status\n` +
         `/help - Show help`;
-      
+
       await ctx.reply(welcomeMessage, { parse_mode: 'Markdown' });
     });
 
@@ -109,7 +121,7 @@ export class TelegramBotServiceEnhanced {
         `• 24h Volume > $1,000,000\n` +
         `• |Funding Rate| > Spread\n\n` +
         `Scans run automatically every hour.`;
-      
+
       await ctx.reply(helpMessage, { parse_mode: 'Markdown' });
     });
 
@@ -143,7 +155,7 @@ export class TelegramBotServiceEnhanced {
         'You will receive notifications when the scanner finds coins matching the criteria.',
         { parse_mode: 'Markdown' }
       );
-      
+
       logger.info(`User ${user.id} (${user.username || 'no username'}) subscribed`);
     });
 
@@ -157,7 +169,7 @@ export class TelegramBotServiceEnhanced {
 
       const initialCount = this.subscribedUsers.length;
       this.subscribedUsers = this.subscribedUsers.filter(u => u.id !== user.id);
-      
+
       if (this.subscribedUsers.length < initialCount) {
         await this.saveSubscribedUsers();
         await ctx.reply('✅ Successfully unsubscribed from alerts.');
@@ -170,13 +182,24 @@ export class TelegramBotServiceEnhanced {
     // Scan command
     this.bot.command('scan', async (ctx) => {
       await ctx.reply('🔍 Running manual scan...');
-      // Note: The actual scan will be triggered from the main scanner
-      // This is just a placeholder response
-      await ctx.reply(
-        'Manual scan request received. The scanner will run on its next scheduled interval.\n\n' +
-        'Use `/status` to check when the last scan occurred.',
-        { parse_mode: 'Markdown' }
-      );
+
+      if (!this.scanCallback) {
+        await ctx.reply('⚠️ Scanner not available. Please try again later.');
+        return;
+      }
+
+      try {
+        const result = await this.scanCallback();
+        await ctx.reply(
+          result.success
+            ? `✅ ${result.message}`
+            : `❌ ${result.message}`,
+          { parse_mode: 'Markdown' }
+        );
+      } catch (error: any) {
+        logger.error('Error during manual scan from /scan command:', error);
+        await ctx.reply(`❌ Scan failed: ${error.message}`);
+      }
     });
 
     // Status command
@@ -184,7 +207,7 @@ export class TelegramBotServiceEnhanced {
       const totalUsers = this.getAllChatIds().length;
       const subscribedCount = this.subscribedUsers.length;
       const envUsersCount = TELEGRAM_CHAT_IDS.length;
-      
+
       const statusMessage = `📊 *Scanner Status*\n\n` +
         `*Users:* ${totalUsers} total\n` +
         `• ${subscribedCount} dynamically subscribed\n` +
@@ -194,7 +217,7 @@ export class TelegramBotServiceEnhanced {
         `• Volume > $1M\n` +
         `• |Funding Rate| > Spread\n\n` +
         `Scans run automatically every hour.`;
-      
+
       await ctx.reply(statusMessage, { parse_mode: 'Markdown' });
     });
   }
@@ -229,7 +252,7 @@ export class TelegramBotServiceEnhanced {
       } catch (error: any) {
         failCount++;
         logger.error(`Failed to send message to chat ${chatId}:`, error.message);
-        
+
         // If user blocked bot or chat doesn't exist, remove them
         if (error.response?.error_code === 403 || error.response?.error_code === 400) {
           logger.warn(`Removing invalid chat ID ${chatId} from subscriptions`);
@@ -288,7 +311,7 @@ export class TelegramBotServiceEnhanced {
     try {
       // Load subscribed users before starting
       await this.loadSubscribedUsers();
-      
+
       // Launch bot
       await this.bot.launch();
       logger.info('Telegram bot started successfully');

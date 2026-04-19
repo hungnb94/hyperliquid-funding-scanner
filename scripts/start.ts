@@ -16,6 +16,9 @@ async function main() {
     const telegramBot = new TelegramBotService();
     const scanner = new FundingScanner(client, telegramBot);
 
+    // Wire up the scan callback so /scan triggers a real scan
+    telegramBot.setScanCallback(() => scanner.triggerManualScan());
+
     // Start Telegram bot
     await telegramBot.startBot();
 

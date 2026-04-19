@@ -33,3 +33,7 @@ export const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
 // Telegram Bot Configuration
 export const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 export const TELEGRAM_CHAT_IDS = process.env.TELEGRAM_CHAT_IDS ? process.env.TELEGRAM_CHAT_IDS.split(',').map(id => id.trim()) : [];
+
+// Scan filter thresholds
+export const MIN_VOLUME = 1_000_000; // $1M minimum 24h volume
+export const MIN_FUNDING = 0.0001; // 0.01% minimum funding rate

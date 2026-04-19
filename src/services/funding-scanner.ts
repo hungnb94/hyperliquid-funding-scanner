@@ -1,15 +1,17 @@
-import { HyperliquidClient, calculateSpread } from '../clients/hyperliquid-client';
+import { HyperliquidClient } from '../clients/hyperliquid-client';
 import { writeFundingRateToCSV } from '../utils/csv-writer';
 import { FundingRateRecord, FilteredCoin } from '../types/hyperliquid';
 import { TARGET_COINS, SCAN_INTERVAL_MS } from '../config';
 import { logger } from '../utils/logger';
 import { TelegramBotService } from './telegram-bot';
+import { scanAndFilterAllCoins } from '../utils/scan-filter';
 
 export class FundingScanner {
   private client: HyperliquidClient;
   private telegramBot: TelegramBotService;
   protected intervalId: NodeJS.Timeout | null = null;
   private isScanning = false;
+  private lastAlertedCoins: Set<string> = new Set();
 
   constructor(client: HyperliquidClient, telegramBot?: TelegramBotService) {
     this.client = client;
@@ -70,90 +72,62 @@ export class FundingScanner {
     }
 
     this.isScanning = true;
-    const timestamp = new Date();
-
-    logger.info('Starting full funding rate scan and filtering for notifications');
 
     try {
-      // Fetch perp dex list
-      const perpDexs = await this.client.getPerpDexs();
-      logger.debug(`Found ${perpDexs.length} perp dexes`);
+      const allFiltered = await scanAndFilterAllCoins(this.client);
 
-      const filteredCoins: FilteredCoin[] = [];
-      const MIN_VOLUME = 1_000_000; // $1M
-      const MIN_FUNDING = 0.0001; // 0.01%
+      // Build a set of coin keys from current scan
+      const currentCoinKeys = new Set(allFiltered.map(c => `${c.dexName || ''}:${c.coin}`));
 
-      for (let dexIndex = 0; dexIndex < perpDexs.length; dexIndex++) {
-        const dexEntry = perpDexs[dexIndex]!;
-        const dexName = dexEntry === null ? "" : dexEntry.name;
-        const dexDisplayName = dexName || "(first perp dex)";
+      // Filter to only NEW coins not previously alerted
+      const newCoins = allFiltered.filter(c => {
+        const key = `${c.dexName || ''}:${c.coin}`;
+        return !this.lastAlertedCoins.has(key);
+      });
 
-        logger.debug(`Processing dex ${dexIndex}: ${dexDisplayName}`);
-
-        try {
-          const [meta, assetContexts] = await this.client.getMetaAndAssetContexts(dexName);
-
-          for (let coinIndex = 0; coinIndex < meta.universe.length; coinIndex++) {
-            const coinMeta = meta.universe[coinIndex]!;
-            const assetContext = assetContexts[coinIndex];
-
-            if (!assetContext) {
-              continue;
-            }
-
-            // Parse volume (dayNtlVlm is string)
-            const volume = parseFloat(assetContext.dayNtlVlm);
-            if (isNaN(volume)) {
-              continue;
-            }
-
-            // Parse funding rate (string to decimal)
-            const fundingRate = parseFloat(assetContext.funding);
-            if (isNaN(fundingRate)) {
-              continue;
-            }
-
-            // Calculate spread from impactPxs
-            const spread = calculateSpread(assetContext.impactPxs);
-
-            // Apply filters
-            if (volume > MIN_VOLUME &&
-                Math.abs(fundingRate) > MIN_FUNDING &&
-                Math.abs(fundingRate) > spread) {
-
-              filteredCoins.push({
-                dexIndex,
-                dexName: dexName || undefined,
-                coin: coinMeta.name,
-                volume,
-                fundingRate,
-                spread,
-              });
-
-              logger.info(`Found matching coin: ${coinMeta.name} (funding: ${(fundingRate * 100).toFixed(4)}%, volume: $${volume.toLocaleString()})`);
-            }
-          }
-        } catch (error) {
-          logger.error(`Failed to process dex ${dexDisplayName}:`, error);
-        }
-
-        // Small delay between dex requests to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-
-      // Send notifications if any coins match criteria
-      if (filteredCoins.length > 0) {
-        logger.info(`Found ${filteredCoins.length} coins matching criteria, sending notifications`);
-        await this.telegramBot.sendFundingAlert(filteredCoins);
+      // Send notifications only for new matches
+      if (newCoins.length > 0) {
+        logger.info(`Found ${newCoins.length} new coins matching criteria (of ${allFiltered.length} total), sending notifications`);
+        await this.telegramBot.sendFundingAlert(newCoins);
       } else {
-        logger.debug('No coins matched filtering criteria');
+        logger.debug('No new coins matched filtering criteria (all previously alerted)');
       }
+
+      // Update alerted set: add all current matches, remove stale ones
+      this.lastAlertedCoins = currentCoinKeys;
 
     } catch (error) {
       logger.error('Error during full scan and filtering:', error);
     }
 
     this.isScanning = false;
+  }
+
+  async triggerManualScan(): Promise<{
+    success: boolean;
+    coinsFound: number;
+    message: string;
+  }> {
+    try {
+      logger.info('Manual scan triggered');
+      await this.scanAndFilterAllCoins();
+      const coinsFound = this.lastAlertedCoins.size;
+
+      return {
+        success: true,
+        coinsFound,
+        message: coinsFound > 0
+          ? `Found ${coinsFound} coins matching criteria. Notifications sent to subscribers.`
+          : 'No coins matching criteria found.'
+      };
+    } catch (error: any) {
+      logger.error('Manual scan failed:', error);
+      return {
+        success: false,
+        coinsFound: 0,
+        message: `Scan failed: ${error.message}`
+      };
+    }
   }
 
   startPeriodicScanning(): void {

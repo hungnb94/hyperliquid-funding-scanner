@@ -3,9 +3,16 @@ import { TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_IDS } from '../config';
 import { FilteredCoin } from '../types/hyperliquid';
 import { logger } from '../utils/logger';
 
+export type ScanCallback = () => Promise<{
+  success: boolean;
+  coinsFound: number;
+  message: string;
+}>;
+
 export class TelegramBotService {
   private bot: Telegraf | null = null;
   private chatIds: string[] = [];
+  private scanCallback: ScanCallback | null = null;
 
   constructor() {
     if (!TELEGRAM_BOT_TOKEN) {
@@ -25,6 +32,10 @@ export class TelegramBotService {
     } catch (error) {
       logger.error('Failed to initialize Telegram bot:', error);
     }
+  }
+
+  setScanCallback(callback: ScanCallback): void {
+    this.scanCallback = callback;
   }
 
   async sendFundingAlert(filteredCoins: FilteredCoin[]): Promise<void> {
@@ -92,11 +103,33 @@ export class TelegramBotService {
     try {
       // Basic command handling
       this.bot.start((ctx) => {
-        ctx.reply('🤖 Hyperliquid Funding Rate Scanner Bot\n\nI will notify you when coins match your funding rate criteria!');
+        ctx.reply('🤖 Hyperliquid Funding Rate Scanner Bot\n\nI will notify you when coins match your funding rate criteria!\n\n*Commands:*\n/scan - Run manual scan\n/help - Show help', { parse_mode: 'Markdown' });
       });
 
       this.bot.help((ctx) => {
-        ctx.reply('📋 *Commands:*\n/start - Start the bot\n/help - Show this help\n\nI automatically send alerts when coins meet the criteria.');
+        ctx.reply('📋 *Commands:*\n/start - Start the bot\n/scan - Run manual scan\n/help - Show this help\n\nI automatically send alerts when coins meet the criteria.', { parse_mode: 'Markdown' });
+      });
+
+      this.bot.command('scan', async (ctx) => {
+        await ctx.reply('🔍 Running manual scan...');
+
+        if (!this.scanCallback) {
+          await ctx.reply('⚠️ Scanner not available. Please try again later.');
+          return;
+        }
+
+        try {
+          const result = await this.scanCallback();
+          await ctx.reply(
+            result.success
+              ? `✅ ${result.message}`
+              : `❌ ${result.message}`,
+            { parse_mode: 'Markdown' }
+          );
+        } catch (error: any) {
+          logger.error('Error during manual scan from /scan command:', error);
+          await ctx.reply(`❌ Scan failed: ${error.message}`);
+        }
       });
 
       // Launch bot
