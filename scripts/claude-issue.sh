@@ -50,6 +50,13 @@ fi
 
 echo "Issue: ${ISSUE_TITLE}"
 
+# ── Fetch latest code ────────────────────────────────────────────────────────
+
+echo "Fetching latest code from origin..."
+git fetch origin
+git checkout main
+git pull origin main
+
 # ── Create branch ────────────────────────────────────────────────────────────
 
 SHORT_SLUG=$(echo "$ISSUE_TITLE" \
