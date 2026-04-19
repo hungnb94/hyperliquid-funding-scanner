@@ -97,7 +97,7 @@ export class TelegramBotServiceEnhanced {
         `I monitor funding rates on Hyperliquid and notify you when coins match criteria:\n` +
         `• |Funding Rate| > 0.01%\n` +
         `• 24h Volume > $1M\n` +
-        `• |Funding Rate| > Spread\n\n` +
+        `• |Funding Rate| > 0.2 * Spread\n\n` +
         `*Commands:*\n` +
         `/subscribe - Subscribe to alerts\n` +
         `/unsubscribe - Unsubscribe from alerts\n` +
@@ -119,7 +119,7 @@ export class TelegramBotServiceEnhanced {
         `*Alert Criteria:*\n` +
         `• |Funding Rate| > 0.01%\n` +
         `• 24h Volume > $1,000,000\n` +
-        `• |Funding Rate| > Spread\n\n` +
+        `• |Funding Rate| > 0.2 * Spread\n\n` +
         `Scans run automatically every hour.`;
 
       await ctx.reply(helpMessage, { parse_mode: 'Markdown' });
@@ -215,7 +215,7 @@ export class TelegramBotServiceEnhanced {
         `*Alert Criteria:*\n` +
         `• |Funding Rate| > 0.01%\n` +
         `• Volume > $1M\n` +
-        `• |Funding Rate| > Spread\n\n` +
+        `• |Funding Rate| > 0.2 * Spread\n\n` +
         `Scans run automatically every hour.`;
 
       await ctx.reply(statusMessage, { parse_mode: 'Markdown' });
@@ -296,7 +296,7 @@ export class TelegramBotServiceEnhanced {
 
     message += `*Criteria:*\n`;
     message += `• |Funding Rate| > 0.01%\n`;
-    message += `• |Funding Rate| > Spread\n`;
+    message += `• |Funding Rate| > 0.2 * Spread\n`;
     message += `• 24h Volume > $1M\n`;
 
     return message;

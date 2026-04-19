@@ -88,7 +88,7 @@ export class TelegramBotService {
 
     message += `*Criteria:*\n`;
     message += `• |Funding Rate| > 0.01%\n`;
-    message += `• |Funding Rate| > Spread\n`;
+    message += `• |Funding Rate| > 0.2 * Spread\n`;
     message += `• 24h Volume > $1M\n`;
 
     return message;

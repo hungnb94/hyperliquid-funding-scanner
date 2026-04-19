@@ -7,7 +7,7 @@ The codebase already has a `TelegramBotService` (`src/services/telegram-bot.ts`)
 1. **Sends alerts** when scanner finds coins matching criteria:
    - |Funding Rate| > 0.01% (0.0001)
    - 24h Volume > $1,000,000
-   - |Funding Rate| > Spread
+   - |Funding Rate| > 0.2 * Spread
 2. **Basic bot commands**: `/start`, `/help`
 3. **Configuration**: Chat IDs via `TELEGRAM_CHAT_IDS` environment variable (comma-separated)
 4. **Integration**: Called from `FundingScanner.scanAndFilterAllCoins()`

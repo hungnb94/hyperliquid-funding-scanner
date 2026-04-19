@@ -44,7 +44,7 @@ export async function scanAndFilterAllCoins(client: HyperliquidClient): Promise<
 
           if (volume > MIN_VOLUME &&
               Math.abs(fundingRate) > MIN_FUNDING &&
-              Math.abs(fundingRate) > spread) {
+              Math.abs(fundingRate) > 0.2 * spread) {
 
             filteredCoins.push({
               dexIndex,

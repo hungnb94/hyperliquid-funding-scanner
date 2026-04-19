@@ -110,7 +110,7 @@ When criteria are met, you'll receive messages like:
 
 Criteria:
 • |Funding Rate| > 0.01%
-• |Funding Rate| > Spread
+• |Funding Rate| > 0.2 * Spread
 • 24h Volume > $1M
 ```
 
