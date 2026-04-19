@@ -3,6 +3,10 @@ import { TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_IDS } from '../config';
 import { FilteredCoin } from '../types/hyperliquid';
 import { logger } from '../utils/logger';
 
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 export type ScanCallback = () => Promise<{
   success: boolean;
   coinsFound: number;
@@ -53,7 +57,7 @@ export class TelegramBotService {
 
     for (const chatId of this.chatIds) {
       try {
-        await this.bot.telegram.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+        await this.bot.telegram.sendMessage(chatId, message, { parse_mode: 'HTML' });
         logger.info(`Sent funding alert to chat ${chatId}`);
       } catch (error) {
         logger.error(`Failed to send message to chat ${chatId}:`, error);
@@ -64,9 +68,9 @@ export class TelegramBotService {
   private formatFundingAlertMessage(filteredCoins: FilteredCoin[]): string {
     const timestamp = new Date().toLocaleString();
 
-    let message = `🚨 *Hyperliquid Funding Rate Alert*\n`;
+    let message = `🚨 <b>Hyperliquid Funding Rate Alert</b>\n`;
     message += `📅 ${timestamp}\n\n`;
-    message += `📊 *Coins matching criteria:*\n\n`;
+    message += `📊 <b>Coins matching criteria:</b>\n\n`;
 
     // Sort by volume descending for display
     const sortedCoins = [...filteredCoins].sort((a, b) => b.volume - a.volume);
@@ -76,17 +80,17 @@ export class TelegramBotService {
       const spreadPercent = (coin.spread * 100).toFixed(4);
       const volumeFormatted = coin.volume.toLocaleString();
 
-      message += `💰 *${coin.coin}*\n`;
+      message += `💰 <b>${escapeHtml(coin.coin)}</b>\n`;
       message += `   📈 Funding: ${fundingPercent}%\n`;
       message += `   📊 Spread: ${spreadPercent}%\n`;
       message += `   💵 Volume: $${volumeFormatted}\n`;
       if (coin.dexName) {
-        message += `   🏛️ DEX: ${coin.dexName}\n`;
+        message += `   🏛️ DEX: ${escapeHtml(coin.dexName)}\n`;
       }
       message += `\n`;
     }
 
-    message += `*Criteria:*\n`;
+    message += `<b>Criteria:</b>\n`;
     message += `• |Funding Rate| > 0.01%\n`;
     message += `• |Funding Rate| > 0.2 * Spread\n`;
     message += `• 24h Volume > $1M\n`;
@@ -103,11 +107,11 @@ export class TelegramBotService {
     try {
       // Basic command handling
       this.bot.start((ctx) => {
-        ctx.reply('🤖 Hyperliquid Funding Rate Scanner Bot\n\nI will notify you when coins match your funding rate criteria!\n\n*Commands:*\n/scan - Run manual scan\n/help - Show help', { parse_mode: 'Markdown' });
+        ctx.reply('🤖 Hyperliquid Funding Rate Scanner Bot\n\nI will notify you when coins match your funding rate criteria!\n\n<b>Commands:</b>\n/scan - Run manual scan\n/help - Show help', { parse_mode: 'HTML' });
       });
 
       this.bot.help((ctx) => {
-        ctx.reply('📋 *Commands:*\n/start - Start the bot\n/scan - Run manual scan\n/help - Show this help\n\nI automatically send alerts when coins meet the criteria.', { parse_mode: 'Markdown' });
+        ctx.reply('📋 <b>Commands:</b>\n/start - Start the bot\n/scan - Run manual scan\n/help - Show this help\n\nI automatically send alerts when coins meet the criteria.', { parse_mode: 'HTML' });
       });
 
       this.bot.command('scan', async (ctx) => {
@@ -124,7 +128,7 @@ export class TelegramBotService {
             result.success
               ? `✅ ${result.message}`
               : `❌ ${result.message}`,
-            { parse_mode: 'Markdown' }
+            { parse_mode: 'HTML' }
           );
         } catch (error: any) {
           logger.error('Error during manual scan from /scan command:', error);
