@@ -82,7 +82,35 @@ Instructions:
 - Implement the changes described in the issue above.
 - Follow existing code conventions in the project.
 - Make minimal, focused changes.
-- Do not add unnecessary comments or documentation."
+- Do not add unnecessary comments or documentation.
+
+## MANDATORY: Test-Driven Development (TDD)
+
+You MUST follow the RED-GREEN-REFACTOR cycle for EVERY feature:
+
+1. **RED** — Write a failing test FIRST
+   - Create/modify test files before any production code
+   - Run the test and VERIFY it fails (not errors, but expected failure)
+   - If test passes immediately, you're testing existing behavior — fix the test
+
+2. **GREEN** — Write minimal code to pass
+   - Only write enough code to make the test pass
+   - No extra features, no premature optimization
+   - Run the test and VERIFY it passes
+
+3. **REFACTOR** — Clean up (only after green)
+   - Remove duplication, improve names
+   - Keep tests green throughout
+
+4. **Repeat** for next behavior
+
+Rules:
+- NO production code without a failing test first
+- Run \`npx tsc --noEmit\` after each cycle to verify types
+- If project has test runner, run tests after each cycle
+- Commit after each complete RED-GREEN-REFACTOR cycle
+
+Test framework: Use whatever is in package.json (jest, vitest, mocha, etc). If none exists, add vitest as dev dependency and configure it."
 
 # ── Run Claude ───────────────────────────────────────────────────────────────
 
