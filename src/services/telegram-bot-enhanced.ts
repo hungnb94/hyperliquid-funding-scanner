@@ -2,6 +2,7 @@ import { Telegraf, Context } from 'telegraf';
 import { TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_IDS } from '../config';
 import { FilteredCoin } from '../types/hyperliquid';
 import { logger } from '../utils/logger';
+import { formatScanResults } from '../utils/format';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -21,6 +22,7 @@ export type ScanCallback = () => Promise<{
   success: boolean;
   coinsFound: number;
   message: string;
+  coins?: FilteredCoin[];
 }>;
 
 export class TelegramBotServiceEnhanced {
@@ -194,12 +196,21 @@ export class TelegramBotServiceEnhanced {
 
       try {
         const result = await this.scanCallback();
-        await ctx.reply(
-          result.success
-            ? `✅ ${result.message}`
-            : `❌ ${result.message}`,
-          { parse_mode: 'HTML' }
-        );
+        
+        let replyMessage: string;
+        if (result.success) {
+          if (result.coins && result.coins.length > 0) {
+            // Use the new formatting function for detailed coin list
+            replyMessage = `✅ ${result.message}\n\n${formatScanResults(result.coins)}`;
+          } else {
+            // Fallback to original message if no coins array
+            replyMessage = `✅ ${result.message}`;
+          }
+        } else {
+          replyMessage = `❌ ${result.message}`;
+        }
+        
+        await ctx.reply(replyMessage, { parse_mode: 'HTML' });
       } catch (error: any) {
         logger.error('Error during manual scan from /scan command:', error);
         await ctx.reply(`❌ Scan failed: ${error.message}`);
@@ -316,6 +327,9 @@ export class TelegramBotServiceEnhanced {
       // Load subscribed users before starting
       await this.loadSubscribedUsers();
 
+      // Register bot menu commands
+      await this.setupBotMenu();
+
       // Launch bot
       await this.bot.launch();
       logger.info('Telegram bot started successfully');
@@ -337,6 +351,24 @@ export class TelegramBotServiceEnhanced {
 
   getSubscribedUserCount(): number {
     return this.subscribedUsers.length;
+  }
+
+  private async setupBotMenu(): Promise<void> {
+    if (!this.bot) return;
+
+    try {
+      await this.bot.telegram.setMyCommands([
+        { command: 'start', description: 'Start the bot and show welcome message' },
+        { command: 'subscribe', description: 'Subscribe to funding rate alerts' },
+        { command: 'unsubscribe', description: 'Unsubscribe from alerts' },
+        { command: 'scan', description: 'Run manual scan and show detailed results' },
+        { command: 'status', description: 'Check scanner status and user count' },
+        { command: 'help', description: 'Show help message' },
+      ]);
+      logger.info('Bot menu commands registered');
+    } catch (error) {
+      logger.error('Failed to set bot menu commands:', error);
+    }
   }
 
   getTotalChatCount(): number {

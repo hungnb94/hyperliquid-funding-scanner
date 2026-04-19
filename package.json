@@ -10,7 +10,8 @@
     "dev": "ts-node --transpile-only scripts/start.ts",
     "dev-enhanced": "ts-node --transpile-only scripts/start-enhanced.ts",
     "filter-coins": "ts-node scripts/filter-coins.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [],
   "author": "",
@@ -25,6 +26,7 @@
     "@types/axios": "^0.9.36",
     "@types/node": "^25.6.0",
     "ts-node": "^10.9.2",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
   }
 }

@@ -114,6 +114,7 @@ export class FundingScannerEnhanced {
     success: boolean;
     coinsFound: number;
     message: string;
+    coins: FilteredCoin[];
   }> {
     try {
       logger.info('Manual scan triggered');
@@ -124,14 +125,16 @@ export class FundingScannerEnhanced {
         coinsFound: coins.length,
         message: coins.length > 0
           ? `Found ${coins.length} coins matching criteria. Notifications sent to subscribers.`
-          : 'No coins matching criteria found.'
+          : 'No coins matching criteria found.',
+        coins
       };
     } catch (error: any) {
       logger.error('Manual scan failed:', error);
       return {
         success: false,
         coinsFound: 0,
-        message: `Scan failed: ${error.message}`
+        message: `Scan failed: ${error.message}`,
+        coins: []
       };
     }
   }
