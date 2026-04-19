@@ -3,19 +3,21 @@ import { writeFundingRateToCSV } from '../utils/csv-writer';
 import { FundingRateRecord, FilteredCoin } from '../types/hyperliquid';
 import { TARGET_COINS, SCAN_INTERVAL_MS } from '../config';
 import { logger } from '../utils/logger';
-import { TelegramBotService } from './telegram-bot';
+import { TelegramBotServiceEnhanced } from './telegram-bot-enhanced';
 import { scanAndFilterAllCoins } from '../utils/scan-filter';
 
-export class FundingScanner {
+export class FundingScannerEnhanced {
   private client: HyperliquidClient;
-  private telegramBot: TelegramBotService;
+  private telegramBot: TelegramBotServiceEnhanced;
   protected intervalId: NodeJS.Timeout | null = null;
   private isScanning = false;
-  private lastAlertedCoins: Set<string> = new Set();
+  private lastScanTime: Date | null = null;
+  private lastFilteredCoins: FilteredCoin[] = [];
+  private alertedCoins: Set<string> = new Set();
 
-  constructor(client: HyperliquidClient, telegramBot?: TelegramBotService) {
+  constructor(client: HyperliquidClient, telegramBot?: TelegramBotServiceEnhanced) {
     this.client = client;
-    this.telegramBot = telegramBot || new TelegramBotService();
+    this.telegramBot = telegramBot || new TelegramBotServiceEnhanced();
   }
 
   async scanOnce(): Promise<void> {
@@ -61,14 +63,15 @@ export class FundingScanner {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
 
+    this.lastScanTime = new Date();
     logger.info('Funding rate scan completed');
     this.isScanning = false;
   }
 
-  async scanAndFilterAllCoins(): Promise<void> {
+  async scanAndFilterAllCoins(): Promise<FilteredCoin[]> {
     if (this.isScanning) {
       logger.warn('Scan already in progress, skipping');
-      return;
+      return this.lastFilteredCoins;
     }
 
     this.isScanning = true;
@@ -82,7 +85,7 @@ export class FundingScanner {
       // Filter to only NEW coins not previously alerted
       const newCoins = allFiltered.filter(c => {
         const key = `${c.dexName || ''}:${c.coin}`;
-        return !this.lastAlertedCoins.has(key);
+        return !this.alertedCoins.has(key);
       });
 
       // Send notifications only for new matches
@@ -94,13 +97,17 @@ export class FundingScanner {
       }
 
       // Update alerted set: add all current matches, remove stale ones
-      this.lastAlertedCoins = currentCoinKeys;
+      this.alertedCoins = currentCoinKeys;
+
+      this.lastFilteredCoins = allFiltered;
+      this.lastScanTime = new Date();
 
     } catch (error) {
       logger.error('Error during full scan and filtering:', error);
     }
 
     this.isScanning = false;
+    return this.lastFilteredCoins;
   }
 
   async triggerManualScan(): Promise<{
@@ -110,14 +117,13 @@ export class FundingScanner {
   }> {
     try {
       logger.info('Manual scan triggered');
-      await this.scanAndFilterAllCoins();
-      const coinsFound = this.lastAlertedCoins.size;
+      const coins = await this.scanAndFilterAllCoins();
 
       return {
         success: true,
-        coinsFound,
-        message: coinsFound > 0
-          ? `Found ${coinsFound} coins matching criteria. Notifications sent to subscribers.`
+        coinsFound: coins.length,
+        message: coins.length > 0
+          ? `Found ${coins.length} coins matching criteria. Notifications sent to subscribers.`
           : 'No coins matching criteria found.'
       };
     } catch (error: any) {
@@ -128,6 +134,22 @@ export class FundingScanner {
         message: `Scan failed: ${error.message}`
       };
     }
+  }
+
+  getScannerStatus(): {
+    isScanning: boolean;
+    lastScanTime: Date | null;
+    lastCoinsFound: number;
+    subscribedUsers: number;
+    totalChats: number;
+  } {
+    return {
+      isScanning: this.isScanning,
+      lastScanTime: this.lastScanTime,
+      lastCoinsFound: this.lastFilteredCoins.length,
+      subscribedUsers: this.telegramBot.getSubscribedUserCount(),
+      totalChats: this.telegramBot.getTotalChatCount(),
+    };
   }
 
   startPeriodicScanning(): void {

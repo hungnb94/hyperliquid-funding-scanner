@@ -5,8 +5,10 @@
   "main": "index.js",
   "scripts": {
     "start": "ts-node scripts/start.ts",
+    "start-enhanced": "ts-node scripts/start-enhanced.ts",
     "build": "tsc",
     "dev": "ts-node --transpile-only scripts/start.ts",
+    "dev-enhanced": "ts-node --transpile-only scripts/start-enhanced.ts",
     "filter-coins": "ts-node scripts/filter-coins.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -16,7 +18,8 @@
   "dependencies": {
     "axios": "^1.15.0",
     "csv-writer": "^1.6.0",
-    "dotenv": "^17.4.2"
+    "dotenv": "^17.4.2",
+    "telegraf": "^4.16.3"
   },
   "devDependencies": {
     "@types/axios": "^0.9.36",
