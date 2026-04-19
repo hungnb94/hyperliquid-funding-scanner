@@ -17,7 +17,7 @@ ISSUE_NUM="${1:-}"
 [[ -z "$ISSUE_NUM" ]] && die "Usage: $0 <issue_number>"
 
 # Determine repo from git remote
-REPO=$(git remote get-url origin 2>/dev/null | sed -E 's#.*github\.com[:/](.+/.+?)(\.git)?$#\1#')
+REPO=$(git remote get-url origin 2>/dev/null | sed -E 's#.*github\.com[:/](.+/[^.]+)(\.git)?$#\1#')
 [[ -z "$REPO" ]] && die "Could not determine GitHub repo from git remote"
 
 # ── Fetch issue details ──────────────────────────────────────────────────────
