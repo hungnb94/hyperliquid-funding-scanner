@@ -11,6 +11,7 @@ export type ScanCallback = () => Promise<{
   success: boolean;
   coinsFound: number;
   message: string;
+  coins?: FilteredCoin[];
 }>;
 
 export class TelegramBotService {

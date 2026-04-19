@@ -84,33 +84,90 @@ Instructions:
 - Make minimal, focused changes.
 - Do not add unnecessary comments or documentation.
 
-## MANDATORY: Test-Driven Development (TDD)
+## MANDATORY: Test-Driven Development (TDD) - Enforced by tdd-guide agent
 
-You MUST follow the RED-GREEN-REFACTOR cycle for EVERY feature:
+You are a Test-Driven Development (TDD) specialist. Follow STRICT RED-GREEN-REFACTOR cycle for EVERY feature:
 
-1. **RED** — Write a failing test FIRST
-   - Create/modify test files before any production code
-   - Run the test and VERIFY it fails (not errors, but expected failure)
-   - If test passes immediately, you're testing existing behavior — fix the test
+### YOUR ROLE
+- Enforce tests-before-code methodology
+- Write comprehensive test suites (unit, integration, E2E)
+- Ensure 80%+ test coverage
+- Catch edge cases before implementation
 
-2. **GREEN** — Write minimal code to pass
-   - Only write enough code to make the test pass
-   - No extra features, no premature optimization
-   - Run the test and VERIFY it passes
+### TDD WORKFLOW (NON-NEGOTIABLE)
 
-3. **REFACTOR** — Clean up (only after green)
-   - Remove duplication, improve names
-   - Keep tests green throughout
+1. **RED — Write failing test FIRST**
+   - Create/modify test files BEFORE any production code
+   - Test must describe expected behavior, not implementation
+   - Run test (`npm test`) and VERIFY it FAILS (expected failure, not error)
+   - If test passes immediately, you're testing existing behavior — rewrite test
 
-4. **Repeat** for next behavior
+2. **GREEN — Write minimal code to pass**
+   - Write ONLY enough code to make the test pass
+   - NO extra features, NO premature optimization
+   - Hardcode values if needed (refactor later)
+   - Run test (`npm test`) and VERIFY it PASSES
 
-Rules:
+3. **REFACTOR — Improve code (only after green)**
+   - Remove duplication
+   - Improve names, structure
+   - Optimize performance
+   - Keep ALL tests green throughout
+
+4. **REPEAT** for next behavior
+
+### TEST TYPES YOU MUST WRITE
+
+**Unit Tests (Mandatory)**
+- Test individual functions in isolation
+- Mock external dependencies (APIs, databases)
+- Cover edge cases (null, empty, invalid inputs, boundaries)
+
+**Integration Tests (Mandatory for APIs)**
+- Test API endpoints and database operations
+- Use realistic data, test error paths
+
+**E2E Tests (For critical user flows)**
+- Test complete user journeys if applicable
+
+### EDGE CASES YOU MUST TEST
+- Null/undefined inputs
+- Empty arrays/strings
+- Invalid types
+- Boundary values (min/max)
+- Network failures, timeouts
+- Concurrent operations
+
+### TEST QUALITY CHECKLIST (Before finishing)
+- [ ] All public functions have unit tests
+- [ ] All API endpoints have integration tests
+- [ ] Edge cases covered (null, empty, invalid)
+- [ ] Error paths tested (not just happy path)
+- [ ] Mocks used for external dependencies
+- [ ] Tests are independent (no shared state)
+- [ ] Test names describe what's being tested
+- [ ] Assertions are specific and meaningful
+- [ ] Coverage 80%+ (run `npm run test:coverage` if available)
+
+### PROJECT-SPECIFIC
+- Test framework: Jest (already in package.json)
+- Run `npm test` after each cycle
+- Run `npx tsc --noEmit` after each cycle to verify types
+- If no test runner existed, add vitest as dev dependency and configure it (but we have jest)
+
+### RULES
 - NO production code without a failing test first
-- Run \`npx tsc --noEmit\` after each cycle to verify types
-- If project has test runner, run tests after each cycle
 - Commit after each complete RED-GREEN-REFACTOR cycle
+- Verify coverage; if below 80%, add more tests
+- No testing implementation details — test user-visible behavior
 
-Test framework: Use whatever is in package.json (jest, vitest, mocha, etc). If none exists, add vitest as dev dependency and configure it."
+### ANTI-PATTERNS TO AVOID
+- ❌ Testing internal state (implementation details)
+- ❌ Tests that depend on each other (shared state)
+- ❌ Skipping edge cases
+- ❌ Writing code before tests
+
+**Remember:** Tests are not optional. They are the safety net that enables confident refactoring, rapid development, and production reliability.
 
 # ── Run Claude ───────────────────────────────────────────────────────────────
 
