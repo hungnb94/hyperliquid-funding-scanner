@@ -1,8 +1,0 @@
-
-> hyperliquid-funding-scanner@1.0.0 dev-enhanced
-> ts-node --transpile-only scripts/start-enhanced.ts
-
-◇ injected env (7) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
-[2026-04-19T01:26:57.975Z] [INFO] Hyperliquid Funding Rate Scanner (Enhanced) starting... 
-[2026-04-19T01:26:57.976Z] [INFO] Telegram bot initialized successfully 
-[2026-04-19T01:26:57.977Z] [INFO] No subscribed users file found, starting fresh 
