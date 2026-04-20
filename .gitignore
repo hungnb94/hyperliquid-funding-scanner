@@ -5,3 +5,7 @@ dist
 .env
 data
 .claude/
+
+*.db
+*.db-wal
+*.db-shm
