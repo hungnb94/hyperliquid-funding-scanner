@@ -11,10 +11,9 @@ export function formatScanResults(coins: FilteredCoin[]): string {
     return '✅ No coins matching criteria found.';
   }
 
-  let message = `🚨 Found ${coins.length} coins:\n\n`;
-
   const sortedCoins = [...coins].sort((a, b) => b.volume - a.volume);
 
+  let message = '';
   for (const coin of sortedCoins) {
     const fundingPercent = (coin.fundingRate * 100).toFixed(4);
     const spreadPercent = (coin.spread * 100).toFixed(4);
