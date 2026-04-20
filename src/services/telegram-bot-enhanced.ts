@@ -10,6 +10,7 @@ import {
   getActiveSubscribers,
   isSubscribed,
   getSubscriberCount,
+  closeDatabase,
 } from '../db/subscriber-db';
 
 function escapeHtml(text: string): string {
@@ -328,8 +329,14 @@ export class TelegramBotServiceEnhanced {
       logger.info('Telegram bot started successfully');
 
       // Graceful shutdown
-      process.on('SIGINT', () => this.bot?.stop('SIGINT'));
-      process.on('SIGTERM', () => this.bot?.stop('SIGTERM'));
+      process.on('SIGINT', () => {
+        this.bot?.stop('SIGINT');
+        closeDatabase();
+      });
+      process.on('SIGTERM', () => {
+        this.bot?.stop('SIGTERM');
+        closeDatabase();
+      });
     } catch (error) {
       logger.error('Failed to start Telegram bot:', error);
     }

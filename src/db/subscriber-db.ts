@@ -49,7 +49,6 @@ export function initDatabase(): void {
 
   database.exec(`
     CREATE INDEX IF NOT EXISTS idx_subscribers_id ON subscribers(id);
-    CREATE INDEX IF NOT EXISTS idx_subscribers_active ON subscribers(id) WHERE unsubscribed_at IS NULL;
   `);
 
   logger.info('Database initialized successfully');
@@ -182,6 +181,14 @@ export function isSubscribed(chatId: number): boolean {
     logger.error('Failed to check subscription:', error);
     handleCorruption();
     return false;
+  }
+}
+
+export function closeDatabase(): void {
+  if (db) {
+    db.close();
+    db = null;
+    logger.info('Database connection closed');
   }
 }
 
