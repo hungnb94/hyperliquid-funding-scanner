@@ -11,7 +11,7 @@ export function formatScanResults(coins: FilteredCoin[]): string {
     return '✅ No coins matching criteria found.';
   }
 
-  let message = `🚨 Found ${coins.length} coins:\\n\\n`;
+  let message = `🚨 Found ${coins.length} coins:\n\n`;
 
   const sortedCoins = [...coins].sort((a, b) => b.volume - a.volume);
 
@@ -21,10 +21,10 @@ export function formatScanResults(coins: FilteredCoin[]): string {
     const volumeFormatted = coin.volume.toLocaleString();
 
     const displayName = coin.dexName ? `${coin.dexName}:${coin.coin}` : coin.coin;
-    message += `💰 <b>${displayName}</b>\\n`;
-    message += `   📈 Funding: ${fundingPercent}%\\n`;
-    message += `   📊 Spread: ${spreadPercent}%\\n`;
-    message += `   💵 Volume: $${volumeFormatted}\\n\\n`;
+    message += `💰 <b>${displayName}</b>\n`;
+    message += `   📈 Funding: ${fundingPercent}%\n`;
+    message += `   📊 Spread: ${spreadPercent}%\n`;
+    message += `   💵 Volume: $${volumeFormatted}\n\n`;
   }
 
   return message.trimEnd();
