@@ -59,3 +59,7 @@ A coin triggers an alert when ALL of the following are true:
 - Duplicate alert prevention: the scanner tracks previously alerted coins and only notifies on new matches. The alerted set is replaced (not merged) each scan cycle so stale coins drop off
 - `TelegramBotServiceEnhanced` auto-removes subscribers on 403 (bot blocked) or 400 (chat not found) errors
 - The `start-enhanced.ts` entrypoint wires `telegramBot.setScanCallback()` to the scanner's `triggerManualScan()` so `/scan` works at runtime
+
+## Quality Standards
+
+Your output will be reviewed by another system after completion. Write code and PR descriptions carefully as if someone will inspect it thoroughly.
