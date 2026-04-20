@@ -2,7 +2,7 @@ import Database, { Statement } from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { logger } from '../utils/logger';
-import { SUBSCRIBER_DB_PATH } from '../config';
+import { APP_DB_PATH } from '../config';
 
 interface Subscriber {
   id: number;
@@ -23,7 +23,7 @@ let stmtIsSubscribed: Statement<[number]> | null = null;
 let stmtGetSubscriberCount: Statement | null = null;
 
 function getDbPath(): string {
-  return SUBSCRIBER_DB_PATH;
+  return APP_DB_PATH;
 }
 
 function openDatabase(): Database.Database {
@@ -52,7 +52,7 @@ function openDatabase(): Database.Database {
 
 function initializeStatements(database: Database.Database): void {
   stmtAddSubscriber = database.prepare(`
-    INSERT INTO subscribers (id, username, first_name, last_name, subscribed_at, unsubscribed_at)
+    INSERT INTO users (id, username, first_name, last_name, subscribed_at, unsubscribed_at)
     VALUES (?, ?, ?, ?, ?, NULL)
     ON CONFLICT(id) DO UPDATE SET
       username = excluded.username,
@@ -63,32 +63,32 @@ function initializeStatements(database: Database.Database): void {
   `);
 
   stmtRemoveSubscriber = database.prepare(`
-    UPDATE subscribers
+    UPDATE users
     SET unsubscribed_at = ?
     WHERE id = ? AND unsubscribed_at IS NULL
   `);
 
   stmtGetActiveSubscribers = database.prepare(`
     SELECT id, username, first_name, last_name, subscribed_at, unsubscribed_at
-    FROM subscribers
+    FROM users
     WHERE unsubscribed_at IS NULL
   `);
 
   stmtIsSubscribed = database.prepare(`
-    SELECT 1 FROM subscribers
+    SELECT 1 FROM users
     WHERE id = ? AND unsubscribed_at IS NULL
     LIMIT 1
   `);
 
   stmtGetSubscriberCount = database.prepare(`
-    SELECT COUNT(*) as count FROM subscribers
+    SELECT COUNT(*) as count FROM users
     WHERE unsubscribed_at IS NULL
   `);
 }
 
 function initDatabaseTables(database: Database.Database): void {
   database.exec(`
-    CREATE TABLE IF NOT EXISTS subscribers (
+    CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY,
       username TEXT,
       first_name TEXT,
@@ -99,7 +99,20 @@ function initDatabaseTables(database: Database.Database): void {
   `);
 
   database.exec(`
-    CREATE INDEX IF NOT EXISTS idx_subscribers_id ON subscribers(id)
+    CREATE INDEX IF NOT EXISTS idx_users_id ON users(id)
+  `);
+
+  // user_settings table for future expansion (alert configs, funding rate preferences, etc.)
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS user_settings (
+      user_id INTEGER PRIMARY KEY,
+      min_funding_rate REAL DEFAULT 0.0001,
+      min_volume_usd REAL DEFAULT 1000000,
+      alert_coins TEXT DEFAULT '',
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
   `);
 
   // Reset cached statements after table creation
