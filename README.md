@@ -5,20 +5,13 @@ A TypeScript application that periodically scans funding rates for perpetual con
 ## Features
 
 - Fetches current funding rates from Hyperliquid API
-- Supports multiple coins across different perp dexes
+- Scans all perpetual contracts across multiple dexes
 - Configurable scan interval (default: 1 hour)
 - Logs results to CSV with timestamp
 - **Telegram bot notifications for coins meeting funding criteria**
+- Dynamic `/subscribe` and `/unsubscribe` commands
 - Environment-based configuration
 - Graceful shutdown handling
-
-## Supported Coins
-
-The scanner can monitor any perpetual contract available on Hyperliquid. By default, it tracks four oil-related perpetuals:
-- `cash:WTI` (WTI crude oil on cash dex)
-- `km:USOIL` (US oil on km dex)
-- `flx:OIL` (Oil on flx dex)
-- `xyz:BRENTOIL` (Brent oil on xyz dex)
 
 ## Installation
 
@@ -31,7 +24,7 @@ The scanner can monitor any perpetual contract available on Hyperliquid. By defa
    ```bash
    cp .env.example .env
    ```
-4. Edit `.env` to configure target coins and settings
+4. Edit `.env` to configure settings
 
 ## Configuration
 
@@ -40,9 +33,6 @@ Edit the `.env` file:
 ```env
 # Hyperliquid API URL
 HYPERLIQUID_API_URL=https://api.hyperliquid.xyz/info
-
-# Target coins as JSON array
-TARGET_COINS=[{"dex": "cash", "coin": "cash:WTI"}, {"dex": "km", "coin": "km:USOIL"}, {"dex": "flx", "coin": "flx:OIL"}, {"dex": "xyz", "coin": "xyz:BRENTOIL"}]
 
 # Scan interval in milliseconds (default: 1 hour = 3600000ms)
 SCAN_INTERVAL_MS=3600000
@@ -61,14 +51,6 @@ TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
 # Get chat ID by messaging your bot and checking https://api.telegram.org/bot<YourBOTToken>/getUpdates
 TELEGRAM_CHAT_IDS=your_chat_id_here,another_chat_id_here
 ```
-
-### Target Coins Format
-
-The `TARGET_COINS` environment variable must be a JSON array of objects with:
-- `dex`: The perp dex name (empty string for first perp dex)
-- `coin`: The full coin name (e.g., "cash:WTI")
-
-To find available coins and dexes, you can use the Hyperliquid API directly or check the exchange interface.
 
 ## Telegram Notifications
 
@@ -175,19 +157,20 @@ The scanner respects Hyperliquid API rate limits by:
 - 100ms delay between coin requests within a scan
 - Exponential backoff on rate limit errors (planned)
 
-## Extending
+## Bot Commands
 
-### Adding More Coins
+The Telegram bot supports these commands:
 
-Edit the `TARGET_COINS` array in `.env` to include additional coins.
+- `/start` - Start the bot and receive a welcome message
+- `/help` - Display help information
+- `/subscribe` - Subscribe to funding rate alerts
+- `/unsubscribe` - Unsubscribe from alerts
+- `/scan` - Trigger a manual scan immediately
+- `/status` - Check scanner status (last scan time, active users)
 
-### Customizing Scan Logic
+### Customizing Alert Logic
 
-Modify `src/services/funding-scanner.ts` to change scanning behavior.
-
-### Adding Alerting
-
-The scanner includes Telegram bot notifications when funding rates meet criteria. Additional alerting methods (Slack, email, etc.) can be added by extending the `TelegramBotService` or creating new notification services.
+Modify `src/services/funding-scanner-enhanced.ts` to change scan behavior, or `src/services/telegram-bot-enhanced.ts` to modify alerting.
 
 ## License
 

@@ -1,7 +1,6 @@
 import { HyperliquidClient } from '../clients/hyperliquid-client';
-import { writeFundingRateToCSV } from '../utils/csv-writer';
-import { FundingRateRecord, FilteredCoin } from '../types/hyperliquid';
-import { TARGET_COINS, SCAN_INTERVAL_MS } from '../config';
+import { FilteredCoin } from '../types/hyperliquid';
+import { SCAN_INTERVAL_MS } from '../config';
 import { logger } from '../utils/logger';
 import { TelegramBotServiceEnhanced } from './telegram-bot-enhanced';
 import { scanAndFilterAllCoins } from '../utils/scan-filter';
@@ -27,44 +26,15 @@ export class FundingScannerEnhanced {
     }
 
     this.isScanning = true;
-    const timestamp = new Date();
+    logger.info('Starting funding rate scan across all coins');
 
-    logger.info(`Starting funding rate scan for ${TARGET_COINS.length} coins`);
-
-    for (const target of TARGET_COINS) {
-      try {
-        logger.debug(`Scanning ${target.coin} (dex: ${target.dex})`);
-
-        const data = await this.client.getFundingRateForCoin(target.dex, target.coin);
-
-        if (data) {
-          const record: FundingRateRecord = {
-            timestamp,
-            dex: target.dex,
-            coin: target.coin,
-            fundingRate: data.fundingRate,
-            oraclePrice: data.oraclePrice,
-            markPrice: data.markPrice,
-            openInterest: data.openInterest,
-            dayNtlVlm: data.dayNtlVlm,
-          };
-
-          await writeFundingRateToCSV(record);
-
-          logger.info(`Funding rate for ${target.coin}: ${data.fundingRate} (oracle: ${data.oraclePrice}, mark: ${data.markPrice})`);
-        } else {
-          logger.warn(`No funding rate data for ${target.coin}`);
-        }
-      } catch (error) {
-        logger.error(`Error scanning ${target.coin}:`, error);
-      }
-
-      // Small delay between coins to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 100));
+    try {
+      await scanAndFilterAllCoins(this.client);
+    } catch (error) {
+      logger.error('Scan failed:', error);
     }
 
     this.lastScanTime = new Date();
-    logger.info('Funding rate scan completed');
     this.isScanning = false;
   }
 
@@ -160,7 +130,7 @@ export class FundingScannerEnhanced {
 
     // Initial scans
     this.scanOnce().catch(error => {
-      logger.error('Initial targeted scan failed:', error);
+      logger.error('Initial scan failed:', error);
     });
 
     this.scanAndFilterAllCoins().catch(error => {
@@ -170,7 +140,7 @@ export class FundingScannerEnhanced {
     // Set up interval
     this.intervalId = setInterval(() => {
       this.scanOnce().catch(error => {
-        logger.error('Periodic targeted scan failed:', error);
+        logger.error('Periodic scan failed:', error);
       });
 
       this.scanAndFilterAllCoins().catch(error => {
