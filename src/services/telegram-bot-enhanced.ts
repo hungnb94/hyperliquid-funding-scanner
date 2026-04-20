@@ -32,6 +32,9 @@ export type ScanCallback = () => Promise<{
   coins?: FilteredCoin[];
 }>;
 
+const MAX_SCAN_RETRIES = 3;
+const SCAN_RETRY_DELAY_MS = 2000;
+
 export class TelegramBotServiceEnhanced {
   private bot: Telegraf | null = null;
   private subscribedUsers: Array<{
@@ -185,27 +188,38 @@ export class TelegramBotServiceEnhanced {
         return;
       }
 
-      try {
-        const result = await this.scanCallback();
-        
-        let replyMessage: string;
-        if (result.success) {
-          if (result.coins && result.coins.length > 0) {
-            // Use the new formatting function for detailed coin list
-            replyMessage = `✅ ${result.message}\n\n${formatScanResults(result.coins)}`;
+      let lastError: Error | null = null;
+
+      for (let attempt = 1; attempt <= MAX_SCAN_RETRIES; attempt++) {
+        try {
+          const result = await this.scanCallback();
+
+          let replyMessage: string;
+          if (result.success) {
+            if (result.coins && result.coins.length > 0) {
+              replyMessage = `✅ ${result.message}\n\n${formatScanResults(result.coins)}`;
+            } else {
+              replyMessage = `✅ ${result.message}`;
+            }
           } else {
-            // Fallback to original message if no coins array
-            replyMessage = `✅ ${result.message}`;
+            replyMessage = `❌ ${result.message}`;
           }
-        } else {
-          replyMessage = `❌ ${result.message}`;
+
+          await ctx.reply(replyMessage, { parse_mode: 'HTML' });
+          return;
+        } catch (error: any) {
+          lastError = error;
+          logger.error(`Scan attempt ${attempt} failed:`, error);
+
+          if (attempt < MAX_SCAN_RETRIES) {
+            await ctx.reply(`⚠️ Attempt ${attempt} failed, retrying...`);
+            await new Promise(resolve => setTimeout(resolve, SCAN_RETRY_DELAY_MS));
+          }
         }
-        
-        await ctx.reply(replyMessage, { parse_mode: 'HTML' });
-      } catch (error: any) {
-        logger.error('Error during manual scan from /scan command:', error);
-        await ctx.reply(`❌ Scan failed: ${error.message}`);
       }
+
+      logger.error('All scan attempts failed:', lastError);
+      await ctx.reply(`❌ Scan failed after ${MAX_SCAN_RETRIES} attempts: ${lastError?.message ?? 'Unknown error'}`);
     });
 
     // Status command
