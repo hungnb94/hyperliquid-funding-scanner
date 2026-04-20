@@ -43,10 +43,6 @@ function openDatabase(): Database.Database {
   db.pragma('foreign_keys = ON');
   db.pragma('busy_timeout = 5000');
   db.pragma('synchronous = NORMAL');
-
-  // Initialize cached statements
-  initializeStatements(db);
-
   return db;
 }
 

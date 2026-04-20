@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "ts-node --transpile-only scripts/start-enhanced.ts",
     "build": "tsc",
-    "start": "ts-node scripts/start-enhanced.ts"
+    "start": "ts-node scripts/start-enhanced.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [],
   "author": "",
@@ -22,7 +24,9 @@
     "@types/axios": "^0.9.36",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.6.0",
+    "@vitest/ui": "^4.1.4",
     "ts-node": "^10.9.2",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
   }
 }
