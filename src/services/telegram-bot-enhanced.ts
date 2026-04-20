@@ -3,8 +3,14 @@ import { TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_IDS } from '../config';
 import { FilteredCoin } from '../types/hyperliquid';
 import { logger } from '../utils/logger';
 import { formatScanResults } from '../utils/format';
-import fs from 'fs/promises';
-import path from 'path';
+import {
+  initDatabase,
+  addSubscriber,
+  removeSubscriber,
+  getActiveSubscribers,
+  isSubscribed,
+  getSubscriberCount,
+} from '../db/subscriber-db';
 
 function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -27,12 +33,16 @@ export type ScanCallback = () => Promise<{
 
 export class TelegramBotServiceEnhanced {
   private bot: Telegraf | null = null;
-  private subscribedUsers: SubscribedUser[] = [];
-  private readonly usersFilePath: string;
+  private subscribedUsers: Array<{
+    id: number;
+    username?: string;
+    firstName?: string;
+    lastName?: string;
+    subscribedAt: string;
+  }> = [];
   private scanCallback: ScanCallback | null = null;
 
   constructor(scanCallback?: ScanCallback) {
-    this.usersFilePath = path.join(process.cwd(), 'data', 'subscribed_users.json');
     this.scanCallback = scanCallback || null;
 
     if (!TELEGRAM_BOT_TOKEN) {
@@ -55,29 +65,11 @@ export class TelegramBotServiceEnhanced {
 
   private async loadSubscribedUsers(): Promise<void> {
     try {
-      await fs.mkdir(path.dirname(this.usersFilePath), { recursive: true });
-      const data = await fs.readFile(this.usersFilePath, 'utf-8');
-      this.subscribedUsers = JSON.parse(data);
-      logger.info(`Loaded ${this.subscribedUsers.length} subscribed users from file`);
-    } catch (error: any) {
-      if (error.code === 'ENOENT') {
-        // File doesn't exist yet, start with empty array
-        this.subscribedUsers = [];
-        logger.info('No subscribed users file found, starting fresh');
-      } else {
-        logger.error('Failed to load subscribed users:', error);
-        this.subscribedUsers = [];
-      }
-    }
-  }
-
-  private async saveSubscribedUsers(): Promise<void> {
-    try {
-      await fs.mkdir(path.dirname(this.usersFilePath), { recursive: true });
-      await fs.writeFile(this.usersFilePath, JSON.stringify(this.subscribedUsers, null, 2));
-      logger.debug(`Saved ${this.subscribedUsers.length} subscribed users to file`);
+      this.subscribedUsers = getActiveSubscribers();
+      logger.info(`Loaded ${this.subscribedUsers.length} subscribed users from database`);
     } catch (error) {
-      logger.error('Failed to save subscribed users:', error);
+      logger.error('Failed to load subscribed users:', error);
+      this.subscribedUsers = [];
     }
   }
 
@@ -139,13 +131,12 @@ export class TelegramBotServiceEnhanced {
         return;
       }
 
-      const existingUser = this.subscribedUsers.find(u => u.id === user.id);
-      if (existingUser) {
+      if (isSubscribed(user.id)) {
         await ctx.reply('✅ You are already subscribed to alerts.');
         return;
       }
 
-      const newUser: SubscribedUser = {
+      const newUser = {
         id: user.id,
         username: user.username,
         firstName: user.first_name,
@@ -153,8 +144,8 @@ export class TelegramBotServiceEnhanced {
         subscribedAt: new Date().toISOString(),
       };
 
-      this.subscribedUsers.push(newUser);
-      await this.saveSubscribedUsers();
+      addSubscriber(newUser);
+      this.subscribedUsers = getActiveSubscribers();
 
       await ctx.reply(
         '✅ Successfully subscribed to funding rate alerts!\n\n' +
@@ -173,11 +164,10 @@ export class TelegramBotServiceEnhanced {
         return;
       }
 
-      const initialCount = this.subscribedUsers.length;
-      this.subscribedUsers = this.subscribedUsers.filter(u => u.id !== user.id);
+      const removed = removeSubscriber(user.id);
 
-      if (this.subscribedUsers.length < initialCount) {
-        await this.saveSubscribedUsers();
+      if (removed) {
+        this.subscribedUsers = getActiveSubscribers();
         await ctx.reply('✅ Successfully unsubscribed from alerts.');
         logger.info(`User ${user.id} unsubscribed`);
       } else {
@@ -271,8 +261,8 @@ export class TelegramBotServiceEnhanced {
         // If user blocked bot or chat doesn't exist, remove them
         if (error.response?.error_code === 403 || error.response?.error_code === 400) {
           logger.warn(`Removing invalid chat ID ${chatId} from subscriptions`);
-          this.subscribedUsers = this.subscribedUsers.filter(u => u.id.toString() !== chatId);
-          await this.saveSubscribedUsers();
+          removeSubscriber(parseInt(chatId, 10));
+          this.subscribedUsers = getActiveSubscribers();
         }
       }
     }
@@ -324,6 +314,9 @@ export class TelegramBotServiceEnhanced {
     }
 
     try {
+      // Initialize database before loading users
+      initDatabase();
+
       // Load subscribed users before starting
       await this.loadSubscribedUsers();
 
