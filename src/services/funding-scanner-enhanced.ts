@@ -130,21 +130,13 @@ export class FundingScannerEnhanced {
   startPeriodicScanning(): void {
     logger.info(`Starting periodic scanning with interval ${SCAN_INTERVAL_MS}ms`);
 
-    // Initial scans
-    this.scanOnce().catch(error => {
-      logger.error('Initial scan failed:', error);
-    });
-
+    // Initial scan
     this.scanAndFilterAllCoins().catch(error => {
       logger.error('Initial filtering scan failed:', error);
     });
 
     // Set up interval
     this.intervalId = setInterval(() => {
-      this.scanOnce().catch(error => {
-        logger.error('Periodic scan failed:', error);
-      });
-
       this.scanAndFilterAllCoins().catch(error => {
         logger.error('Periodic filtering scan failed:', error);
       });
