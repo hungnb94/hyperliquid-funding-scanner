@@ -11,27 +11,21 @@ TypeScript/Node.js application that periodically scans funding rates for perpetu
 - `src/utils/` — Utilities (`logger.ts`, `csv-writer.ts`, `scan-filter.ts`)
 - `src/config/` — Configuration from environment variables
 - `src/types/` — TypeScript type definitions for Hyperliquid API responses
-- `scripts/` — Entry point scripts (`start.ts`, `start-enhanced.ts`, `filter-coins.ts`, `test-scan.ts`, `test-periodic.ts`)
+- `scripts/` — Entry point scripts (`start-enhanced.ts`)
 - `data/` — CSV output and subscribed users JSON
 
 ### Main Classes
 - **`HyperliquidClient`** (`src/clients/hyperliquid-client.ts`) — fetches funding rates, asset contexts, and perp dex list from Hyperliquid API. Exports `calculateSpread()` helper.
-- **`FundingScanner`** (`src/services/funding-scanner.ts`) — orchestrates periodic scans for target coins, writes results to CSV, sends Telegram alerts via `TelegramBotService`. Tracks `lastAlertedCoins` set to prevent duplicate notifications.
-- **`FundingScannerEnhanced`** (`src/services/funding-scanner-enhanced.ts`) — extends the base pattern with `TelegramBotServiceEnhanced`. Tracks `lastScanTime`, `lastFilteredCoins`, and `alertedCoins`. Exposes `getScannerStatus()` for bot status commands.
-- **`TelegramBotService`** (`src/services/telegram-bot.ts`) — basic Telegram bot with `/start`, `/help`, `/scan` commands. Sends alerts to static `TELEGRAM_CHAT_IDS`. Uses HTML `parse_mode`.
-- **`TelegramBotServiceEnhanced`** (`src/services/telegram-bot-enhanced.ts`) — enhanced Telegram bot with dynamic `/subscribe` and `/unsubscribe` commands. Persists subscribers to `data/subscribed_users.json`. Merges env-configured chat IDs with dynamically subscribed users. Auto-removes users who block the bot (403/400 errors). Limits alert messages to 10 coins.
+- **`FundingScannerEnhanced`** (`src/services/funding-scanner-enhanced.ts`) — orchestrates periodic scans, writes results to CSV, sends Telegram alerts. Tracks `lastScanTime`, `lastFilteredCoins`, and `alertedCoins`. Exposes `getScannerStatus()` for bot status commands.
+- **`TelegramBotServiceEnhanced`** (`src/services/telegram-bot-enhanced.ts`) — Telegram bot with dynamic `/subscribe` and `/unsubscribe` commands. Persists subscribers to `data/subscribed_users.json`. Merges env-configured chat IDs with dynamically subscribed users. Auto-removes users who block the bot (403/400 errors). Limits alert messages to 10 coins.
 
 ### Shared Logic
-- **`scanAndFilterAllCoins()`** (`src/utils/scan-filter.ts`) — iterates all perp dexes via `getPerpDexs()`, fetches `metaAndAssetContexts` for each dex, and filters coins by alert criteria. Both `FundingScanner` and `FundingScannerEnhanced` call this function.
+- **`scanAndFilterAllCoins()`** (`src/utils/scan-filter.ts`) — iterates all perp dexes via `getPerpDexs()`, fetches `metaAndAssetContexts` for each dex, and filters coins by alert criteria.
 
 ## Commands
-- `npm run dev` — run basic scanner (ts-node, transpile-only) via `scripts/start.ts`
-- `npm run dev-enhanced` — run enhanced scanner (ts-node, transpile-only) via `scripts/start-enhanced.ts`
-- `npm run start` — run basic scanner (ts-node)
-- `npm run start-enhanced` — run enhanced scanner (ts-node)
+- `npm run dev` — run enhanced scanner (ts-node, transpile-only) via `scripts/start-enhanced.ts`
 - `npm run build` — compile TypeScript to `dist/`
-- `npx tsc --noEmit` — type check without emitting
-- `npm run filter-coins` — run coin filter script
+- `npm run start` — run enhanced scanner (ts-node)
 
 ## Alert Criteria
 A coin triggers an alert when ALL of the following are true:
@@ -63,7 +57,7 @@ A coin triggers an alert when ALL of the following are true:
 
 ## Important Notes
 - Telegram messages use HTML `parse_mode` — user-supplied text (coin names, DEX names) must be escaped with `escapeHtml()` to prevent injection
-- Duplicate alert prevention: both scanner variants track previously alerted coins and only notify on new matches. The alerted set is replaced (not merged) each scan cycle so stale coins drop off
+- Duplicate alert prevention: the scanner tracks previously alerted coins and only notifies on new matches. The alerted set is replaced (not merged) each scan cycle so stale coins drop off
 - `TelegramBotServiceEnhanced` auto-removes subscribers on 403 (bot blocked) or 400 (chat not found) errors
 - The `start-enhanced.ts` entrypoint wires `telegramBot.setScanCallback()` to the scanner's `triggerManualScan()` so `/scan` works at runtime
 - `TARGET_COINS` is required — the process exits with code 1 if it is missing or empty
