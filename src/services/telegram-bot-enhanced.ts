@@ -328,14 +328,16 @@ export class TelegramBotServiceEnhanced {
       await this.bot.launch();
       logger.info('Telegram bot started successfully');
 
-      // Graceful shutdown
+      // Graceful shutdown - close db before exiting
       process.on('SIGINT', () => {
-        this.bot?.stop('SIGINT');
+        logger.info('Received SIGINT, shutting down...');
         closeDatabase();
+        process.exit(0);
       });
       process.on('SIGTERM', () => {
-        this.bot?.stop('SIGTERM');
+        logger.info('Received SIGTERM, shutting down...');
         closeDatabase();
+        process.exit(0);
       });
     } catch (error) {
       logger.error('Failed to start Telegram bot:', error);
