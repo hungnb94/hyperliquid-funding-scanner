@@ -338,8 +338,8 @@ export class TelegramBotServiceEnhanced {
       // Register bot menu commands
       await this.setupBotMenu();
 
-      // Launch bot
-      await this.bot.launch();
+      // Launch bot (non-blocking - launch() blocks forever so we don't await)
+      this.bot.launch();
       logger.info('Telegram bot started successfully');
 
       // Graceful shutdown - close db before exiting
