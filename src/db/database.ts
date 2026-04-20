@@ -102,19 +102,6 @@ function initDatabaseTables(database: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_users_id ON users(id)
   `);
 
-  // user_settings table for future expansion (alert configs, funding rate preferences, etc.)
-  database.exec(`
-    CREATE TABLE IF NOT EXISTS user_settings (
-      user_id INTEGER PRIMARY KEY,
-      min_funding_rate REAL DEFAULT 0.0001,
-      min_volume_usd REAL DEFAULT 1000000,
-      alert_coins TEXT DEFAULT '',
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users(id)
-    )
-  `);
-
   // Reset cached statements after table creation
   initializeStatements(database);
 }
