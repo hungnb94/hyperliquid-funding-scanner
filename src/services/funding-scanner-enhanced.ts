@@ -39,6 +39,20 @@ export class FundingScannerEnhanced {
   }
 
   async scanAndFilterAllCoins(): Promise<FilteredCoin[]> {
+    const coins = await this.scanOnly();
+
+    // Send notifications for new matches
+    if (coins.length > 0) {
+      logger.info(`Found ${coins.length} coins matching criteria, sending notifications`);
+      await this.telegramBot.sendFundingAlert(coins);
+    } else {
+      logger.debug('No coins matched filtering criteria');
+    }
+
+    return coins;
+  }
+
+  async scanOnly(): Promise<FilteredCoin[]> {
     if (this.isScanning) {
       logger.warn('Scan already in progress, skipping');
       return this.lastFilteredCoins;
@@ -52,32 +66,19 @@ export class FundingScannerEnhanced {
       // Build a set of coin keys from current scan
       const currentCoinKeys = new Set(allFiltered.map(c => `${c.dexName || ''}:${c.coin}`));
 
-      // Filter to only NEW coins not previously alerted
-      const newCoins = allFiltered.filter(c => {
-        const key = `${c.dexName || ''}:${c.coin}`;
-        return !this.alertedCoins.has(key);
-      });
-
-      // Send notifications only for new matches
-      if (newCoins.length > 0) {
-        logger.info(`Found ${newCoins.length} new coins matching criteria (of ${allFiltered.length} total), sending notifications`);
-        await this.telegramBot.sendFundingAlert(newCoins);
-      } else {
-        logger.debug('No new coins matched filtering criteria (all previously alerted)');
-      }
-
       // Update alerted set: add all current matches, remove stale ones
       this.alertedCoins = currentCoinKeys;
 
       this.lastFilteredCoins = allFiltered;
       this.lastScanTime = new Date();
 
+      return this.lastFilteredCoins;
     } catch (error) {
-      logger.error('Error during full scan and filtering:', error);
+      logger.error('Error during scan:', error);
+      return [];
+    } finally {
+      this.isScanning = false;
     }
-
-    this.isScanning = false;
-    return this.lastFilteredCoins;
   }
 
   async triggerManualScan(): Promise<{
@@ -88,13 +89,14 @@ export class FundingScannerEnhanced {
   }> {
     try {
       logger.info('Manual scan triggered');
-      const coins = await this.scanAndFilterAllCoins();
+      // Use scanOnly() to avoid sending duplicate alerts to subscribers
+      const coins = await this.scanOnly();
 
       return {
         success: true,
         coinsFound: coins.length,
         message: coins.length > 0
-          ? `Found ${coins.length} coins matching criteria. Notifications sent to subscribers.`
+          ? `Found ${coins.length} coins matching criteria.`
           : 'No coins matching criteria found.',
         coins
       };
