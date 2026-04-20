@@ -2,6 +2,7 @@ import Database, { Statement } from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { logger } from '../utils/logger';
+import { SUBSCRIBER_DB_PATH } from '../config';
 
 interface Subscriber {
   id: number;
@@ -22,7 +23,7 @@ let stmtIsSubscribed: Statement<[number]> | null = null;
 let stmtGetSubscriberCount: Statement | null = null;
 
 function getDbPath(): string {
-  return path.join(process.cwd(), 'data', 'subscribers.db');
+  return SUBSCRIBER_DB_PATH;
 }
 
 function openDatabase(): Database.Database {
