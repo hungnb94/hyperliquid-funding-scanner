@@ -35,7 +35,6 @@ A coin triggers an alert when ALL of the following are true:
 
 ## Environment Variables
 - `HYPERLIQUID_API_URL` — API endpoint (default: `https://api.hyperliquid.xyz/info`)
-- `TARGET_COINS` — JSON array of `{dex, coin}` objects to monitor for targeted scans
 - `SCAN_INTERVAL_MS` — scan interval in ms (default: `3600000` = 1 hour)
 - `CSV_FILE_PATH` — output CSV path (default: `./data/funding_rates.csv`)
 - `FILTER_OUTPUT_CSV_PATH` — filtered coins CSV path (default: `./data/filtered_coins.csv`)
@@ -60,4 +59,3 @@ A coin triggers an alert when ALL of the following are true:
 - Duplicate alert prevention: the scanner tracks previously alerted coins and only notifies on new matches. The alerted set is replaced (not merged) each scan cycle so stale coins drop off
 - `TelegramBotServiceEnhanced` auto-removes subscribers on 403 (bot blocked) or 400 (chat not found) errors
 - The `start-enhanced.ts` entrypoint wires `telegramBot.setScanCallback()` to the scanner's `triggerManualScan()` so `/scan` works at runtime
-- `TARGET_COINS` is required — the process exits with code 1 if it is missing or empty
